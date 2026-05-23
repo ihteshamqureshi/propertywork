@@ -1,300 +1,333 @@
 import Property from "../models/Property.js";
-import fs from "fs";
-import path from "path";
-// Helper: build absolute URL for a file path
-const buildFileUrl = (req, filePath) => {
-  if (!filePath) return null;
-  // If already a full URL, return as-is
-  if (filePath.startsWith("http")) return filePath;
-  const relativePath = filePath.replace(/\\/g, "/").split("uploads/")[1];
-  return `${req.protocol}://${req.get("host")}/uploads/${relativePath}`;
+
+// Helper: build public URL for a file
+const getFileUrl = (req, filename) => {
+  return `${req.protocol}://${req.get("host")}/uploads/${filename}`;
 };
 
-// Helper: delete a file from disk safely
-const deleteFile = (filePath) => {
-  if (!filePath || filePath.startsWith("http")) return;
+// ================= 1. CREATE PROPERTY =================
+export const createProperty = async (req, res) => {
   try {
-    const fullPath = path.join(__dirname, "../uploads", filePath.split("uploads/")[1]);
-    if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-  } catch (e) {
-    console.error("File delete error:", e.message);
-  }
-};
+    const photoFiles = req.files?.["photos"] || [];
+    const videoFile = req.files?.["video"]?.[0] || null;
 
-// ─── CREATE ──────────────────────────────────────────────────────────────────
-// POST /api/properties
-const createProperty = async (req, res) => {
-  try {
-    const body = req.body;
-
-    // Collect uploaded photo paths
-    const photoPaths = req.files?.photos?.map((f) => f.path) || [];
-    if (photoPaths.length === 0) {
-      return res.status(400).json({ success: false, message: "At least 1 photo is required." });
+    if (photoFiles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload at least 1 photo",
+      });
     }
 
-    // Collect optional video path
-    const videoFile = req.files?.video?.[0];
-    const videoPath = videoFile ? videoFile.path : null;
+    const photoUrls = photoFiles.map((file) => getFileUrl(req, file.filename));
+    const videoUrl = videoFile ? getFileUrl(req, videoFile.filename) : null;
 
-    // Build nested objects from flat form-data keys
+    // Parse nearby places
+    let nearbyPlaces = [];
+    if (req.body.nearby) {
+      try {
+        nearbyPlaces = typeof req.body.nearby === 'string' 
+          ? JSON.parse(req.body.nearby) 
+          : req.body.nearby;
+      } catch (error) {
+        nearbyPlaces = [];
+      }
+    }
+
+    // Parse amenities
+    let amenitiesList = [];
+    if (req.body.amenities) {
+      try {
+        amenitiesList = typeof req.body.amenities === 'string'
+          ? JSON.parse(req.body.amenities)
+          : req.body.amenities;
+      } catch (error) {
+        amenitiesList = [];
+      }
+    }
+
     const propertyData = {
-      title: body.title,
-      type: body.type,
-      status: body.status,
-      price: Number(body.price),
+      title: req.body.title,
+      description: req.body.description,
+      type: req.body.type,
+      status: req.body.status,
+      price: req.body.price,
+      
       location: {
-        address: body["location.address"] || body.address,
-        city: body["location.city"] || body.city,
-        area: body["location.area"] || body.area,
-        coordinates: {
-          lat: body["location.coordinates.lat"] ? Number(body["location.coordinates.lat"]) : undefined,
-          lng: body["location.coordinates.lng"] ? Number(body["location.coordinates.lng"]) : undefined,
-        },
+        address: req.body.address,
+        city: req.body.city,
+        area: req.body.area,
+        zipCode: req.body.zipCode,
+        landmark: req.body.landmark,
       },
+      
+      nearby: nearbyPlaces,
+      amenities: amenitiesList,
+      
       size: {
-        value: Number(body["size.value"] || body.sizeValue),
-        unit: body["size.unit"] || body.sizeUnit,
+        value: req.body.sizeValue,
+        unit: req.body.sizeUnit,
       },
-      bedrooms: Number(body.bedrooms),
-      bathrooms: Number(body.bathrooms),
-      photos: photoPaths,
-      videoUrl: videoPath,
+      bedrooms: req.body.bedrooms,
+      bathrooms: req.body.bathrooms,
+      kitchens: req.body.kitchens || 1,
+      floors: req.body.floors || 1,
+      
+      yearBuilt: req.body.yearBuilt,
+      condition: req.body.condition,
+      isFurnished: req.body.isFurnished === "true" || req.body.isFurnished === true,
+      furnishedType: req.body.furnishedType,
+      
+      availableFrom: req.body.availableFrom || null,
+      
+      photos: photoUrls,
+      videoUrl: videoUrl,
+      
       contact: {
-        name: body["contact.name"] || body.contactName,
-        phone: body["contact.phone"] || body.contactPhone,
-        whatsapp: body["contact.whatsapp"] || body.contactWhatsapp || undefined,
+        name: req.body.contactName,
+        phone: req.body.contactPhone,
+        whatsapp: req.body.contactWhatsapp || "",
+        email: req.body.contactEmail || "",
       },
-      isActive: body.isActive !== undefined ? body.isActive === "true" : true,
     };
 
     const property = new Property(propertyData);
     await property.save();
 
-    // Return URLs instead of raw disk paths in response
-    const responseData = property.toObject();
-    responseData.photos = responseData.photos.map((p) => buildFileUrl(req, p));
-    responseData.videoUrl = buildFileUrl(req, responseData.videoUrl);
+    res.status(201).json({
+      success: true,
+      message: "Property created successfully!",
+      property: property,
+    });
 
-    res.status(201).json({ success: true, message: "Property created successfully.", data: responseData });
   } catch (error) {
-    // Clean up uploaded files on validation failure
-    if (req.files?.photos) req.files.photos.forEach((f) => deleteFile(f.path));
-    if (req.files?.video) req.files.video.forEach((f) => deleteFile(f.path));
-
-    if (error.name === "ValidationError") {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    console.error("createProperty error:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+    console.error("Create Property Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create property",
+    });
   }
 };
 
-// ─── FIND ALL ─────────────────────────────────────────────────────────────────
-// GET /api/properties
-const getAllProperties = async (req, res) => {
+// ================= 2. GET ALL PROPERTIES =================
+export const getAllProperties = async (req, res) => {
   try {
-    const {
-      type,
-      status,
-      city,
-      area,
-      minPrice,
-      maxPrice,
-      bedrooms,
-      bathrooms,
-      sizeUnit,
-      isActive,
-      page = 1,
-      limit = 10,
-      sortBy = "createdAt",
-      order = "desc",
-    } = req.query;
+    const filter = { isActive: true };
 
-    const filter = {};
-
-    if (type) filter.type = type;
-    if (status) filter.status = status;
-    if (city) filter["location.city"] = { $regex: city, $options: "i" };
-    if (area) filter["location.area"] = { $regex: area, $options: "i" };
-    if (bedrooms) filter.bedrooms = Number(bedrooms);
-    if (bathrooms) filter.bathrooms = Number(bathrooms);
-    if (sizeUnit) filter["size.unit"] = sizeUnit;
-    if (isActive !== undefined) filter.isActive = isActive === "true";
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = Number(minPrice);
-      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    if (req.query.city) filter["location.city"] = req.query.city;
+    if (req.query.type) filter.type = req.query.type;
+    if (req.query.status) filter.status = req.query.status;
+    
+    if (req.query.search) {
+      filter.$or = [
+        { title: { $regex: req.query.search, $options: "i" } },
+        { description: { $regex: req.query.search, $options: "i" } },
+        { "location.city": { $regex: req.query.search, $options: "i" } },
+      ];
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
-    const sortOrder = order === "asc" ? 1 : -1;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    const [properties, total] = await Promise.all([
-      Property.find(filter)
-        .sort({ [sortBy]: sortOrder })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      Property.countDocuments(filter),
-    ]);
+    const properties = await Property.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    // Convert paths to URLs
-    const data = properties.map((p) => ({
-      ...p,
-      photos: p.photos.map((ph) => buildFileUrl(req, ph)),
-      videoUrl: buildFileUrl(req, p.videoUrl),
-    }));
+    const total = await Property.countDocuments(filter);
 
     res.status(200).json({
       success: true,
-      total,
-      page: Number(page),
-      pages: Math.ceil(total / Number(limit)),
-      data,
+      total: total,
+      page: page,
+      pages: Math.ceil(total / limit),
+      properties: properties,
     });
+
   } catch (error) {
-    console.error("getAllProperties error:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+    console.error("Get All Properties Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch properties",
+    });
   }
 };
 
-// ─── FIND ONE ─────────────────────────────────────────────────────────────────
-// GET /api/properties/:id
-const getPropertyById = async (req, res) => {
-  try {
-    const property = await Property.findById(req.params.id).lean();
-    if (!property) {
-      return res.status(404).json({ success: false, message: "Property not found." });
-    }
-
-    property.photos = property.photos.map((p) => buildFileUrl(req, p));
-    property.videoUrl = buildFileUrl(req, property.videoUrl);
-
-    res.status(200).json({ success: true, data: property });
-  } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({ success: false, message: "Invalid property ID." });
-    }
-    console.error("getPropertyById error:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
-  }
-};
-
-// ─── UPDATE ───────────────────────────────────────────────────────────────────
-// PUT /api/properties/:id
-const updateProperty = async (req, res) => {
+// ================= 3. GET SINGLE PROPERTY =================
+export const getPropertyById = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
+
     if (!property) {
-      return res.status(404).json({ success: false, message: "Property not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
     }
 
-    const body = req.body;
+    property.views = (property.views || 0) + 1;
+    await property.save();
 
-    // Handle new photo uploads
-    const newPhotoPaths = req.files?.photos?.map((f) => f.path) || [];
-    // Handle new video upload
-    const newVideoFile = req.files?.video?.[0];
+    res.status(200).json({
+      success: true,
+      property: property,
+    });
 
-    // Photos: if new photos uploaded, replace old; otherwise keep existing
-    let finalPhotos = property.photos;
-    if (newPhotoPaths.length > 0) {
-      // Delete old photos from disk
-      property.photos.forEach((p) => deleteFile(p));
-      finalPhotos = newPhotoPaths;
-    }
-
-    // Video: if new video uploaded, replace old
-    let finalVideo = property.videoUrl;
-    if (newVideoFile) {
-      if (property.videoUrl) deleteFile(property.videoUrl);
-      finalVideo = newVideoFile.path;
-    }
-
-    // Build update object (only update fields provided)
-    const updates = {
-      ...(body.title && { title: body.title }),
-      ...(body.type && { type: body.type }),
-      ...(body.status && { status: body.status }),
-      ...(body.price && { price: Number(body.price) }),
-      location: {
-        address: body["location.address"] || body.address || property.location.address,
-        city: body["location.city"] || body.city || property.location.city,
-        area: body["location.area"] || body.area || property.location.area,
-        coordinates: {
-          lat: body["location.coordinates.lat"]
-            ? Number(body["location.coordinates.lat"])
-            : property.location.coordinates?.lat,
-          lng: body["location.coordinates.lng"]
-            ? Number(body["location.coordinates.lng"])
-            : property.location.coordinates?.lng,
-        },
-      },
-      size: {
-        value: body["size.value"] ? Number(body["size.value"]) : property.size.value,
-        unit: body["size.unit"] || property.size.unit,
-      },
-      ...(body.bedrooms && { bedrooms: Number(body.bedrooms) }),
-      ...(body.bathrooms && { bathrooms: Number(body.bathrooms) }),
-      photos: finalPhotos,
-      videoUrl: finalVideo,
-      contact: {
-        name: body["contact.name"] || body.contactName || property.contact.name,
-        phone: body["contact.phone"] || body.contactPhone || property.contact.phone,
-        whatsapp:
-          body["contact.whatsapp"] || body.contactWhatsapp || property.contact.whatsapp,
-      },
-      ...(body.isActive !== undefined && { isActive: body.isActive === "true" }),
-    };
-
-    const updated = await Property.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
-      runValidators: true,
-    }).lean();
-
-    updated.photos = updated.photos.map((p) => buildFileUrl(req, p));
-    updated.videoUrl = buildFileUrl(req, updated.videoUrl);
-
-    res.status(200).json({ success: true, message: "Property updated successfully.", data: updated });
   } catch (error) {
-    if (req.files?.photos) req.files.photos.forEach((f) => deleteFile(f.path));
-    if (req.files?.video) req.files.video.forEach((f) => deleteFile(f.path));
-
-    if (error.name === "ValidationError") {
-      return res.status(400).json({ success: false, message: error.message });
-    }
+    console.error("Get Property By ID Error:", error.message);
+    
     if (error.name === "CastError") {
-      return res.status(400).json({ success: false, message: "Invalid property ID." });
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
     }
-    console.error("updateProperty error:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch property",
+    });
   }
 };
 
-// ─── DELETE ───────────────────────────────────────────────────────────────────
-// DELETE /api/properties/:id
-const deleteProperty = async (req, res) => {
+// ================= 4. UPDATE PROPERTY =================
+export const updateProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
+
     if (!property) {
-      return res.status(404).json({ success: false, message: "Property not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
     }
 
-    // Delete all associated files from disk
-    property.photos.forEach((p) => deleteFile(p));
-    if (property.videoUrl) deleteFile(property.videoUrl);
+    const photoFiles = req.files?.["photos"] || [];
+    const videoFile = req.files?.["video"]?.[0] || null;
 
-    await Property.findByIdAndDelete(req.params.id);
+    const photoUrls = photoFiles.length > 0
+      ? photoFiles.map((file) => getFileUrl(req, file.filename))
+      : property.photos;
 
-    res.status(200).json({ success: true, message: "Property deleted successfully." });
+    const videoUrl = videoFile
+      ? getFileUrl(req, videoFile.filename)
+      : property.videoUrl;
+
+    // Parse nearby places
+    let nearbyPlaces = property.nearby;
+    if (req.body.nearby) {
+      try {
+        nearbyPlaces = typeof req.body.nearby === 'string'
+          ? JSON.parse(req.body.nearby)
+          : req.body.nearby;
+      } catch (error) {
+        nearbyPlaces = property.nearby;
+      }
+    }
+
+    // Parse amenities
+    let amenitiesList = property.amenities;
+    if (req.body.amenities) {
+      try {
+        amenitiesList = typeof req.body.amenities === 'string'
+          ? JSON.parse(req.body.amenities)
+          : req.body.amenities;
+      } catch (error) {
+        amenitiesList = property.amenities;
+      }
+    }
+
+    // Update fields
+    property.title = req.body.title || property.title;
+    property.description = req.body.description || property.description;
+    property.type = req.body.type || property.type;
+    property.status = req.body.status || property.status;
+    property.price = req.body.price || property.price;
+    property.bedrooms = req.body.bedrooms || property.bedrooms;
+    property.bathrooms = req.body.bathrooms || property.bathrooms;
+    property.kitchens = req.body.kitchens || property.kitchens;
+    property.floors = req.body.floors || property.floors;
+    property.yearBuilt = req.body.yearBuilt || property.yearBuilt;
+    property.condition = req.body.condition || property.condition;
+    property.isFurnished = req.body.isFurnished === "true" || req.body.isFurnished === true || property.isFurnished;
+    property.furnishedType = req.body.furnishedType || property.furnishedType;
+    property.availableFrom = req.body.availableFrom || property.availableFrom;
+    
+    property.photos = photoUrls;
+    property.videoUrl = videoUrl;
+    property.nearby = nearbyPlaces;
+    property.amenities = amenitiesList;
+
+    // Update location
+    if (req.body.address || req.body.city || req.body.area) {
+      property.location.address = req.body.address || property.location.address;
+      property.location.city = req.body.city || property.location.city;
+      property.location.area = req.body.area || property.location.area;
+      property.location.zipCode = req.body.zipCode || property.location.zipCode;
+      property.location.landmark = req.body.landmark || property.location.landmark;
+    }
+
+    // Update size
+    if (req.body.sizeValue || req.body.sizeUnit) {
+      property.size.value = req.body.sizeValue || property.size.value;
+      property.size.unit = req.body.sizeUnit || property.size.unit;
+    }
+
+    // Update contact
+    if (req.body.contactName || req.body.contactPhone) {
+      property.contact.name = req.body.contactName || property.contact.name;
+      property.contact.phone = req.body.contactPhone || property.contact.phone;
+      property.contact.whatsapp = req.body.contactWhatsapp || property.contact.whatsapp;
+      property.contact.email = req.body.contactEmail || property.contact.email;
+    }
+
+    const updatedProperty = await property.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Property updated successfully!",
+      property: updatedProperty,
+    });
+
   } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({ success: false, message: "Invalid property ID." });
-    }
-    console.error("deleteProperty error:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+    console.error("Update Property Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update property",
+    });
   }
 };
 
-export { createProperty, getAllProperties, getPropertyById, updateProperty, deleteProperty };
+// ================= 5. DELETE PROPERTY =================
+export const deleteProperty = async (req, res) => {
+  try {
+    const property = await Property.findByIdAndDelete(req.params.id);
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Property deleted successfully!",
+    });
+
+  } catch (error) {
+    console.error("Delete Property Error:", error.message);
+    
+    if (error.name === "CastError") {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete property",
+    });
+  }
+};

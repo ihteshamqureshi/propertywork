@@ -44,25 +44,27 @@
 import jwt from "jsonwebtoken";
 
 const authMiddleware = (req, res, next) => {
+  // Get token from cookie
+  const token = req.cookies.token;
+
+  // Check if token exists
+  if (!token) {
+    return res.status(401).json({
+      message: "Please login first"
+    });
+  }
+
   try {
-    const token = req.cookies.token;
+    // Verify token
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Please login first",
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = decoded; // {id, role}
+    // Add user info to request
+    req.user = verified;
 
     next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid token",
+    res.status(401).json({
+      message: "Invalid token"
     });
   }
 };

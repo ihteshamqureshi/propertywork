@@ -1,90 +1,183 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
 
-// __dirname fix (ES Modules)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// ======================================================
+// CONFIGURATION
+// ======================================================
+const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_PHOTOS = 10;
+const MAX_VIDEOS = 1;
 
-// Upload directories
-const photoDir = path.join(__dirname, "../uploads/photos");
-const videoDir = path.join(__dirname, "../uploads/videos");
+// Allowed image types
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
 
-// Ensure folders exist
-if (!fs.existsSync(photoDir)) fs.mkdirSync(photoDir, { recursive: true });
-if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true });
+// Allowed video types
+const ALLOWED_VIDEO_TYPES = [
+  "video/mp4",
+  "video/mpeg",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/webm",
+];
 
-// Storage config
+const ALLOWED_FILE_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
+// ======================================================
+// CREATE UPLOAD FOLDER
+// ======================================================
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  console.log("✅ Uploads folder created:", UPLOAD_DIR);
+}
+
+// ======================================================
+// MULTER STORAGE
+// ======================================================
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    if (file.fieldname === "photos") {
-      cb(null, photoDir);
-    } else if (file.fieldname === "video") {
-      cb(null, videoDir);
-    } else {
-      cb(new Error("Unknown field: " + file.fieldname));
-    }
+  destination: (req, file, cb) => {
+    cb(null, UPLOAD_DIR);
   },
-
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+  filename: (req, file, cb) => {
+    const sanitizedName = file.originalname.replace(/\s+/g, "_");
+    const uniqueName = `${Date.now()}-${sanitizedName}`;
+    cb(null, uniqueName);
   },
 });
 
-// File filter
+// ======================================================
+// FILE FILTER
+// ======================================================
 const fileFilter = (req, file, cb) => {
-  const imageTypes = /jpeg|jpg|png|webp/;
-  const videoTypes = /mp4|mov|avi|mkv|webm/;
-
-  const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
-
-  if (file.fieldname === "photos" && imageTypes.test(ext)) {
-    cb(null, true);
-  } else if (file.fieldname === "video" && videoTypes.test(ext)) {
+  if (ALLOWED_FILE_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(
-      new Error(
-        `Invalid file type for "${file.fieldname}". Only images or videos allowed.`
-      ),
-      false
-    );
+    cb(new Error("Invalid file type. Only images and videos are allowed"), false);
   }
 };
 
-// Multer instance
+// ======================================================
+// MULTER INSTANCE
+// ======================================================
 const upload = multer({
-  storage,
-  fileFilter,
+  storage: storage,
+  fileFilter: fileFilter,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB
+    fileSize: MAX_FILE_SIZE,
+    files: MAX_PHOTOS + MAX_VIDEOS,
   },
 });
 
-// Accept multiple photos + 1 video
-const uploadPropertyMedia = upload.fields([
-  { name: "photos", maxCount: 10 },
-  { name: "video", maxCount: 1 },
+// ======================================================
+// UPLOAD FIELDS
+// ======================================================
+export const uploadFields = upload.fields([
+  { name: "photos", maxCount: MAX_PHOTOS },
+  { name: "video", maxCount: MAX_VIDEOS },
 ]);
 
-// Middleware wrapper (IMPORTANT EXPORT)
-export const handleUpload = (req, res, next) => {
-  uploadPropertyMedia(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
+// ======================================================
+// SINGLE FILE UPLOADS
+// ======================================================
+export const uploadPhoto = upload.single("photo");
+export const uploadVideo = upload.single("video");
+export const uploadMultiple = upload.array("photos", MAX_PHOTOS);
+
+// ======================================================
+// FILE URL HELPER
+// ======================================================
+export const getFileUrl = (req, filename) => {
+  if (!filename) return null;
+  return `${req.protocol}://${req.get("host")}/uploads/${filename}`;
+};
+
+// ======================================================
+// DELETE FILE
+// ======================================================
+export const deleteFile = (filepath) => {
+  if (!filepath) return false;
+  try {
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Error deleting file:", error);
+    return false;
+  }
+};
+
+// ======================================================
+// DELETE MULTIPLE FILES
+// ======================================================
+export const deleteMultipleFiles = (files = []) => {
+  const results = [];
+  files.forEach((file) => {
+    if (file && typeof file === "string") {
+      results.push(deleteFile(file));
+    } else if (file && file.path) {
+      results.push(deleteFile(file.path));
+    }
+  });
+  return results;
+};
+
+// ======================================================
+// MULTER ERROR HANDLER
+// ======================================================
+export const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "FILE_TOO_LARGE") {
       return res.status(400).json({
         success: false,
-        message: "Upload error: " + err.message,
-      });
-    } else if (err) {
-      return res.status(400).json({
-        success: false,
-        message: err.message,
+        message: `File too large. Max ${MAX_FILE_SIZE / (1024 * 1024)} MB`,
       });
     }
+    if (err.code === "LIMIT_FILE_COUNT") {
+      return res.status(400).json({
+        success: false,
+        message: `Too many files. Max ${MAX_PHOTOS} photos and ${MAX_VIDEOS} video`,
+      });
+    }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res.status(400).json({
+        success: false,
+        message: "Unexpected field. Use 'photos' or 'video'",
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
 
-    next();
-  });
+  if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  next();
+};
+
+// ======================================================
+// EXPORTS
+// ======================================================
+export {
+  UPLOAD_DIR,
+  MAX_FILE_SIZE,
+  MAX_PHOTOS,
+  MAX_VIDEOS,
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_VIDEO_TYPES,
+  upload,
 };

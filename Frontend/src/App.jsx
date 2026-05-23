@@ -4,8 +4,8 @@ import Navbar from "./components/Navbar";
 
 import Home from "./pages/Home";
 import Details from "./pages/Details";
-// import Login from "./pages/Login";
-// import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 
 
 
@@ -20,8 +20,8 @@ function App() {
                 <Routes>
 
 
-                    {/* <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} /> */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<Signup />} />
 
                     <Route path="/" element={<Home />} />
 

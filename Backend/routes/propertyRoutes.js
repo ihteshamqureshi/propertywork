@@ -1,29 +1,30 @@
 import express from "express";
-import { handleUpload } from "../middleware/upload.js";
-
+import { uploadFields } from "../middleware/upload.js";
 import {
   createProperty,
   getAllProperties,
   getPropertyById,
   updateProperty,
   deleteProperty,
-} from "../controllers/property.controller.js";
-  
+} from "../controllers/property.Controller.js";
+
 const router = express.Router();
 
-// GET  /api/properties        → Find All (with filters & pagination)
+// Routes
+
+// Create new property (with photos & video)
+router.post("/", uploadFields, createProperty);
+
+// Get all properties
 router.get("/", getAllProperties);
 
-// GET  /api/properties/:id    → Find One
+// Get single property by ID
 router.get("/:id", getPropertyById);
 
-// POST /api/properties        → Create (with photo + video upload)
-router.post("/", handleUpload, createProperty);
+// Update property
+router.put("/:id", uploadFields, updateProperty);
 
-// PUT  /api/properties/:id    → Update (with optional new photo/video)
-router.put("/:id", handleUpload, updateProperty);
-
-// DELETE /api/properties/:id  → Delete (also removes files from disk)
+// Delete property
 router.delete("/:id", deleteProperty);
 
 export default router;

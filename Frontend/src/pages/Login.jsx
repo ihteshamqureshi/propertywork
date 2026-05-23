@@ -53,7 +53,7 @@ function Login() {
 
         try {
             setLoading(true);
-            const res = await api.post("/login", {
+            const res = await api.post("/auth/login", {
                 email,
                 password,
             });

@@ -1,634 +1,495 @@
-
-
-
-// src/pages/HomePage.jsx
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllProperties, createProperty } from "../services/api";
+import { getAllProperties, createProperty, deleteProperty } from "../services/api";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const EMPTY_FORM = {
-  title: "",
-  type: "house",
-  status: "for_sale",
-  price: "",
-  "location.address": "",
-  "location.city": "",
-  "location.area": "",
-  "location.coordinates.lat": "",
-  "location.coordinates.lng": "",
-  "size.value": "",
-  "size.unit": "marla",
-  bedrooms: "",
-  bathrooms: "",
-  "contact.name": "",
-  "contact.phone": "",
-  "contact.whatsapp": "",
-  isActive: true,
-};
-
-const TYPE_ICONS = {
-  house: "🏠",
-  apartment: "🏢",
-  plot: "📐",
-  commercial: "🏪",
-};
-
-// ─── Component ────────────────────────────────────────────────────────────────
-export default function HomePage() {
+const HomePage = () => {
   const navigate = useNavigate();
-
   const [properties, setProperties] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [pages, setPages] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [listError, setListError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
-  const [filters, setFilters] = useState({
+  // Form state with all new fields
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    type: "house",
+    status: "for_sale",
+    price: "",
+    address: "",
     city: "",
-    type: "",
-    status: "",
-    minPrice: "",
-    maxPrice: "",
-    page: 1,
-    limit: 9,
-    sortBy: "createdAt",
-    order: "desc",
+    area: "",
+    zipCode: "",
+    landmark: "",
+    sizeValue: "",
+    sizeUnit: "marla",
+    bedrooms: "",
+    bathrooms: "",
+    kitchens: "1",
+    floors: "1",
+    yearBuilt: "",
+    condition: "good",
+    isFurnished: false,
+    furnishedType: "unfurnished",
+    availableFrom: "",
+    contactName: "",
+    contactPhone: "",
+    contactWhatsapp: "",
+    contactEmail: "",
   });
 
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  // For nearby places
+  const [nearbyPlaces, setNearbyPlaces] = useState([]);
+  
+  // For amenities
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
+  
   const [photos, setPhotos] = useState([]);
-  const [previews, setPreviews] = useState([]);
   const [video, setVideo] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [formSuccess, setFormSuccess] = useState("");
 
-  const photoInputRef = useRef(null);
-  const videoInputRef = useRef(null);
-
-  // ── Fetch list ──────────────────────────────────────────────────────────────
-  const fetchProperties = useCallback(async () => {
-    setLoading(true);
-    setListError("");
-
-    try {
-      const res = await getAllProperties(filters);
-     setProperties(res.data?.data || res.data?.properties || []);
-      setTotal(res.total);
-      setPages(res.pages);
-    } catch (e) {
-      setListError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
+  // Available amenities list
+  const amenitiesList = [
+    "parking", "gym", "security", "swimming_pool", "elevator",
+    "backup_electricity", "gas_connection", "water_supply", 
+    "internet", "cctv", "air_conditioning", "heating"
+  ];
 
   useEffect(() => {
     fetchProperties();
-  }, [fetchProperties]);
+  }, []);
 
-  // ── Photo previews ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    const urls = photos.map((f) => URL.createObjectURL(f));
-    setPreviews(urls);
-    return () => urls.forEach((u) => URL.revokeObjectURL(u));
-  }, [photos]);
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value, page: 1 }));
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllProperties();
+      setProperties(data.properties);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFormChange = (e) => {
+  const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handlePhotoSelect = (e) => {
-    const incoming = Array.from(e.target.files);
-    setPhotos((prev) => {
-      const combined = [...prev, ...incoming];
-      return combined.slice(0, 10);
+    setForm({
+      ...form,
+      [name]: type === "checkbox" ? checked : value
     });
-
-    if (photoInputRef.current) photoInputRef.current.value = "";
   };
 
-  const removePhoto = (idx) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== idx));
+  // Nearby places functions
+  const addNearbyPlace = () => {
+    setNearbyPlaces([...nearbyPlaces, { name: "", type: "school", distance: "" }]);
   };
 
-  const handleVideoSelect = (e) => {
-    setVideo(e.target.files[0] || null);
-    if (videoInputRef.current) videoInputRef.current.value = "";
+  const removeNearbyPlace = (index) => {
+    const updated = nearbyPlaces.filter((_, i) => i !== index);
+    setNearbyPlaces(updated);
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setForm(EMPTY_FORM);
-    setPhotos([]);
-    setVideo(null);
-    setFormError("");
-    setFormSuccess("");
+  const updateNearbyPlace = (index, field, value) => {
+    const updated = [...nearbyPlaces];
+    updated[index][field] = value;
+    setNearbyPlaces(updated);
   };
 
-  // ── Submit create ────────────────────────────────────────────────────────────
+  // Toggle amenities
+  const toggleAmenity = (amenity) => {
+    if (selectedAmenities.includes(amenity)) {
+      setSelectedAmenities(selectedAmenities.filter(a => a !== amenity));
+    } else {
+      setSelectedAmenities([...selectedAmenities, amenity]);
+    }
+  };
+
+  const handlePhotos = (e) => {
+    setPhotos(Array.from(e.target.files));
+  };
+
+  const handleVideo = (e) => {
+    setVideo(e.target.files[0]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormError("");
-    setFormSuccess("");
-
-    if (photos.length === 0) {
-      setFormError("Kam az kam 1 photo zaroor upload karein.");
-      return;
-    }
-
-    const fd = new FormData();
-    Object.entries(form).forEach(([key, val]) => {
-      if (val !== "" && val !== null && val !== undefined) {
-        fd.append(key, val);
-      }
-    });
-
-    photos.forEach((p) => fd.append("photos", p));
-    if (video) fd.append("video", video);
-
     setSubmitting(true);
+    setError("");
 
     try {
-      await createProperty(fd);
-      setFormSuccess("Property successfully list ho gayi!");
-      fetchProperties();
+      const formData = new FormData();
+      
+      // Basic fields
+      Object.keys(form).forEach((key) => {
+        formData.append(key, form[key]);
+      });
+      
+      // Nearby places (convert to JSON)
+      formData.append("nearby", JSON.stringify(nearbyPlaces));
+      
+      // Amenities (convert to JSON)
+      formData.append("amenities", JSON.stringify(selectedAmenities));
+      
+      // Files
+      photos.forEach((photo) => formData.append("photos", photo));
+      if (video) formData.append("video", video);
 
-      setTimeout(() => {
-        closeModal();
-      }, 1200);
-    } catch (e) {
-      setFormError(e.message);
+      await createProperty(formData);
+      setSuccessMsg("Property added successfully!");
+      setShowPopup(false);
+      resetForm();
+      fetchProperties();
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ── Render stays EXACT SAME ────────────────────────────────────────────────
+  const resetForm = () => {
+    setForm({
+      title: "",
+      description: "",
+      type: "house",
+      status: "for_sale",
+      price: "",
+      address: "",
+      city: "",
+      area: "",
+      zipCode: "",
+      landmark: "",
+      sizeValue: "",
+      sizeUnit: "marla",
+      bedrooms: "",
+      bathrooms: "",
+      kitchens: "1",
+      floors: "1",
+      yearBuilt: "",
+      condition: "good",
+      isFurnished: false,
+      furnishedType: "unfurnished",
+      availableFrom: "",
+      contactName: "",
+      contactPhone: "",
+      contactWhatsapp: "",
+      contactEmail: "",
+    });
+    setNearbyPlaces([]);
+    setSelectedAmenities([]);
+    setPhotos([]);
+    setVideo(null);
+  };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this property?")) return;
+    try {
+      await deleteProperty(id);
+      setProperties(properties.filter((p) => p._id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Playfair+Display:wght@600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Instrument Sans', sans-serif; background: #f5f4f0; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modalIn { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `}</style>
-
-      <div style={{ minHeight: "100vh", background: "#f5f4f0" }}>
-
-        {/* ── Header ── */}
-        <header style={{ background: "#18181b", padding: "0 28px" }}>
-          <div style={{ maxWidth: 1160, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", height: 62 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 22 }}>🏛</span>
-              <span style={{ fontFamily: "'Playfair Display', serif", color: "#fff", fontSize: 20, letterSpacing: "-0.3px" }}>PropFind</span>
-            </div>
-            <button
-              onClick={() => setShowModal(true)}
-              style={{ background: "#d4a843", color: "#18181b", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", letterSpacing: "0.3px" }}
-            >
-              + Property List Karein
-            </button>
-          </div>
-        </header>
-
-        {/* ── Hero filter bar ── */}
-        <div style={{ background: "#18181b", padding: "0 28px 22px" }}>
-          <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <input
-                name="city"
-                value={filters.city}
-                onChange={handleFilterChange}
-                placeholder="Sheher search karein..."
-                style={inputStyle}
-              />
-              <select name="type" value={filters.type} onChange={handleFilterChange} style={selectStyle}>
-                <option value="">Sab types</option>
-                <option value="house">House</option>
-                <option value="apartment">Apartment</option>
-                <option value="plot">Plot</option>
-                <option value="commercial">Commercial</option>
-              </select>
-              <select name="status" value={filters.status} onChange={handleFilterChange} style={selectStyle}>
-                <option value="">Sab status</option>
-                <option value="for_sale">For Sale</option>
-                <option value="for_rent">For Rent</option>
-              </select>
-              <input
-                name="minPrice"
-                value={filters.minPrice}
-                onChange={handleFilterChange}
-                placeholder="Min price"
-                type="number"
-                style={{ ...inputStyle, width: 120 }}
-              />
-              <input
-                name="maxPrice"
-                value={filters.maxPrice}
-                onChange={handleFilterChange}
-                placeholder="Max price"
-                type="number"
-                style={{ ...inputStyle, width: 120 }}
-              />
-              <button
-                type="button"
-              >
-                Search
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Results count ── */}
-        <div style={{ maxWidth: 1160, margin: "18px auto 0", padding: "0 28px" }}>
-          <p style={{ fontSize: 13, color: "#71717a" }}>
-            {loading ? "Dhoondh raha hoon..." : `${total} properties mili`}
-          </p>
-        </div>
-
-        {/* ── Grid ── */}
-        {loading ? (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 340 }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", border: "3px solid #e4e4e7", borderTop: "3px solid #d4a843", animation: "spin 0.7s linear infinite" }} />
-          </div>
-        ) : listError ? (
-          <div style={{ maxWidth: 500, margin: "48px auto", padding: 24, background: "#fef2f2", borderRadius: 12, border: "1px solid #fecaca", color: "#b91c1c", textAlign: "center", fontSize: 14 }}>
-            {listError}
-          </div>
-        ) : properties.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 300, gap: 12 }}>
-            <span style={{ fontSize: 48 }}>🏗</span>
-            <p style={{ color: "#a1a1aa", fontSize: 15 }}>Koi property nahi mili</p>
-            <button onClick={() => setShowModal(true)} style={{ background: "#18181b", color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, cursor: "pointer", marginTop: 4 }}>
-              Pehli property add karein
-            </button>
-          </div>
-        ) : (
-          <div style={{ maxWidth: 1160, margin: "20px auto 40px", padding: "0 28px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))", gap: 18 }}>
-            {properties.map((p, i) => (
-              <PropertyCard key={p._id} property={p} index={i} onClick={() => navigate(`/property/${p._id}`)} />
-            ))}
-          </div>
-        )}
-
-        {/* ── Pagination ── */}
-        {pages > 1 && !loading && (
-          <div style={{ display: "flex", justifyContent: "center", gap: 6, paddingBottom: 48 }}>
-            <button
-              disabled={filters.page <= 1}
-              onClick={() => setFilters((p) => ({ ...p, page: p.page - 1 }))}
-              style={pgBtnStyle(false)}
-            >
-              ←
-            </button>
-            {Array.from({ length: pages }, (_, i) => i + 1).map((pg) => (
-              <button
-                key={pg}
-                onClick={() => setFilters((p) => ({ ...p, page: pg }))}
-                style={pgBtnStyle(filters.page === pg)}
-              >
-                {pg}
-              </button>
-            ))}
-            <button
-              disabled={filters.page >= pages}
-              onClick={() => setFilters((p) => ({ ...p, page: p.page + 1 }))}
-              style={pgBtnStyle(false)}
-            >
-              →
-            </button>
-          </div>
-        )}
+    <div className="min-h-screen bg-gray-100 p-5 font-sans">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-5">
+        <h1 className="text-2xl font-bold text-blue-600">🏠 PropertyApp</h1>
+        <button
+          onClick={() => setShowPopup(true)}
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          + Add Property
+        </button>
       </div>
 
-      {/* ── Create Modal ── */}
-      {showModal && (
-        <div
-          onClick={(e) => e.target === e.currentTarget && closeModal()}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 999, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px", overflowY: "auto", animation: "overlayIn 0.18s ease" }}
-        >
-          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 660, boxShadow: "0 24px 64px rgba(0,0,0,0.25)", animation: "modalIn 0.22s ease", marginBottom: 24 }}>
+      {/* Messages */}
+      {successMsg && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+          {successMsg}
+        </div>
+      )}
 
-            {/* Modal header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 26px 16px", borderBottom: "1px solid #f4f4f5" }}>
-              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: "#18181b" }}>Nai Property List Karein</span>
-              <button onClick={closeModal} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#a1a1aa", lineHeight: 1, padding: 4 }}>×</button>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-center text-gray-600 py-10">Loading properties...</div>
+      )}
+
+      {!loading && properties.length === 0 && (
+        <div className="text-center text-gray-600 py-10">No properties found. Add one!</div>
+      )}
+
+      {/* Property Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {properties.map((property) => (
+          <div key={property._id} className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition">
+            {/* Image */}
+            <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+              {property.photos?.[0] ? (
+                <img
+                  src={property.photos[0]}
+                  alt={property.title}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => (e.target.style.display = "none")}
+                />
+              ) : (
+                <div className="text-gray-500">No Image</div>
+              )}
             </div>
 
-            <div style={{ padding: "18px 26px 28px", maxHeight: "78vh", overflowY: "auto" }}>
-              <form onSubmit={handleSubmit}>
-
-                {formError && <Alert type="error">{formError}</Alert>}
-                {formSuccess && <Alert type="success">{formSuccess}</Alert>}
-
-                <Section label="Basic Info">
-                  <Row>
-                    <Field label="Title *" span={3}>
-                      <input style={iStyle} name="title" value={form.title} onChange={handleFormChange} required placeholder="e.g. 5 Marla House DHA" />
-                    </Field>
-                  </Row>
-                  <Row cols={3}>
-                    <Field label="Type *">
-                      <select style={iStyle} name="type" value={form.type} onChange={handleFormChange}>
-                        <option value="house">House</option>
-                        <option value="apartment">Apartment</option>
-                        <option value="plot">Plot</option>
-                        <option value="commercial">Commercial</option>
-                      </select>
-                    </Field>
-                    <Field label="Status *">
-                      <select style={iStyle} name="status" value={form.status} onChange={handleFormChange}>
-                        <option value="for_sale">For Sale</option>
-                        <option value="for_rent">For Rent</option>
-                      </select>
-                    </Field>
-                    <Field label="Price (PKR) *">
-                      <input style={iStyle} type="number" name="price" value={form.price} onChange={handleFormChange} required placeholder="2500000" />
-                    </Field>
-                  </Row>
-                </Section>
-
-                <Section label="Location">
-                  <Row>
-                    <Field label="Address *" span={3}>
-                      <input style={iStyle} name="location.address" value={form["location.address"]} onChange={handleFormChange} required placeholder="Gali / Block" />
-                    </Field>
-                  </Row>
-                  <Row cols={2}>
-                    <Field label="City *">
-                      <input style={iStyle} name="location.city" value={form["location.city"]} onChange={handleFormChange} required placeholder="Lahore" />
-                    </Field>
-                    <Field label="Area *">
-                      <input style={iStyle} name="location.area" value={form["location.area"]} onChange={handleFormChange} required placeholder="DHA Phase 5" />
-                    </Field>
-                  </Row>
-                  <Row cols={2}>
-                    <Field label="Latitude">
-                      <input style={iStyle} type="number" step="any" name="location.coordinates.lat" value={form["location.coordinates.lat"]} onChange={handleFormChange} placeholder="31.5204" />
-                    </Field>
-                    <Field label="Longitude">
-                      <input style={iStyle} type="number" step="any" name="location.coordinates.lng" value={form["location.coordinates.lng"]} onChange={handleFormChange} placeholder="74.3587" />
-                    </Field>
-                  </Row>
-                </Section>
-
-                <Section label="Size & Rooms">
-                  <Row cols={4}>
-                    <Field label="Size *">
-                      <input style={iStyle} type="number" name="size.value" value={form["size.value"]} onChange={handleFormChange} required placeholder="5" />
-                    </Field>
-                    <Field label="Unit *">
-                      <select style={iStyle} name="size.unit" value={form["size.unit"]} onChange={handleFormChange}>
-                        <option value="marla">Marla</option>
-                        <option value="kanal">Kanal</option>
-                        <option value="sqft">Sqft</option>
-                      </select>
-                    </Field>
-                    <Field label="Bedrooms *">
-                      <input style={iStyle} type="number" name="bedrooms" value={form.bedrooms} onChange={handleFormChange} required min="0" placeholder="3" />
-                    </Field>
-                    <Field label="Bathrooms *">
-                      <input style={iStyle} type="number" name="bathrooms" value={form.bathrooms} onChange={handleFormChange} required min="0" placeholder="2" />
-                    </Field>
-                  </Row>
-                </Section>
-
-                <Section label="Contact">
-                  <Row cols={3}>
-                    <Field label="Naam *">
-                      <input style={iStyle} name="contact.name" value={form["contact.name"]} onChange={handleFormChange} required placeholder="Ahmed Ali" />
-                    </Field>
-                    <Field label="Phone *">
-                      <input style={iStyle} name="contact.phone" value={form["contact.phone"]} onChange={handleFormChange} required placeholder="03001234567" />
-                    </Field>
-                    <Field label="WhatsApp">
-                      <input style={iStyle} name="contact.whatsapp" value={form["contact.whatsapp"]} onChange={handleFormChange} placeholder="03001234567" />
-                    </Field>
-                  </Row>
-                </Section>
-
-                <Section label={`Photos (${photos.length}/10) — Kam az kam 1 zaroor *`}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                    <button
-                      type="button"
-                      onClick={() => photoInputRef.current?.click()}
-                      style={{ background: "#f4f4f5", border: "1px dashed #d4d4d8", borderRadius: 8, padding: "7px 16px", fontSize: 13, cursor: "pointer", color: "#52525b" }}
-                    >
-                      📷 Photos chunein
-                    </button>
-                    <span style={{ fontSize: 12, color: "#a1a1aa" }}>Max 10 · jpeg, jpg, png, webp</span>
-                    <input ref={photoInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple onChange={handlePhotoSelect} style={{ display: "none" }} />
-                  </div>
-                  {previews.length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {previews.map((url, i) => (
-                        <div key={i} style={{ position: "relative", width: 80, height: 66 }}>
-                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8, border: "1px solid #e4e4e7" }} />
-                          <button
-                            type="button"
-                            onClick={() => removePhoto(i)}
-                            style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, background: "#ef4444", color: "#fff", border: "none", borderRadius: "50%", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+            {/* Card Body */}
+            <div className="p-4">
+              <h3 className="font-bold text-lg mb-2">{property.title}</h3>
+              <p className="text-gray-600 text-sm mb-1">
+                📍 {property.location?.city}, {property.location?.area}
+              </p>
+              <p className="text-blue-600 font-bold text-lg mb-2">
+                Rs. {property.price?.toLocaleString()}
+              </p>
+              <p className="text-gray-600 text-sm mb-1">
+                🏷️ {property.type} | {property.status?.replace("_", " ")}
+              </p>
+              <p className="text-gray-600 text-sm">
+                🛏️ {property.bedrooms} Beds | 🚿 {property.bathrooms} Baths
+              </p>
+              
+              {/* Show amenities badges */}
+              {property.amenities?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {property.amenities.slice(0, 3).map((item, idx) => (
+                    <span key={idx} className="text-xs bg-gray-100 px-2 py-1 rounded">
+                      {item.replace("_", " ")}
+                    </span>
+                  ))}
+                  {property.amenities.length > 3 && (
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                      +{property.amenities.length - 3}
+                    </span>
                   )}
-                </Section>
-
-                <Section label="Video (Optional)">
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <button
-                      type="button"
-                      onClick={() => videoInputRef.current?.click()}
-                      style={{ background: "#f4f4f5", border: "1px dashed #d4d4d8", borderRadius: 8, padding: "7px 16px", fontSize: 13, cursor: "pointer", color: "#52525b" }}
-                    >
-                      🎥 Video chunein
-                    </button>
-                    {video ? (
-                      <span style={{ fontSize: 12, color: "#16a34a", display: "flex", alignItems: "center", gap: 4 }}>
-                        ✓ {video.name}
-                        <button type="button" onClick={() => setVideo(null)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 14, lineHeight: 1 }}>×</button>
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 12, color: "#a1a1aa" }}>mp4, mov, avi, mkv · max 100MB</span>
-                    )}
-                    <input ref={videoInputRef} type="file" accept="video/*" onChange={handleVideoSelect} style={{ display: "none" }} />
-                  </div>
-                </Section>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{ width: "100%", marginTop: 8, padding: "12px", background: submitting ? "#a1a1aa" : "#18181b", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer", transition: "background 0.2s" }}
-                >
-                  {submitting ? "Upload ho raha hai..." : "Property List Karein ✓"}
-                </button>
-              </form>
+                </div>
+              )}
             </div>
+
+            {/* Card Actions */}
+            <div className="flex gap-2 p-4 pt-0">
+              <button
+                onClick={() => navigate(`/property/${property._id}`)}
+                className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+              >
+                View Details
+              </button>
+              <button
+                onClick={() => handleDelete(property._id)}
+                className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add Property Popup */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Popup Header */}
+            <div className="flex justify-between items-center p-5 border-b sticky top-0 bg-white">
+              <h2 className="text-xl font-bold">Add New Property</h2>
+              <button
+                onClick={() => {
+                  setShowPopup(false);
+                  resetForm();
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Popup Body */}
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              {/* Basic Info */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Title *</label>
+                <input
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Description *</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  required
+                  rows="3"
+                  placeholder="Describe your property..."
+                  className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Type *</label>
+                  <select name="type" value={form.type} onChange={handleChange} className="w-full border p-2 rounded">
+                    <option value="house">House</option>
+                    <option value="apartment">Apartment</option>
+                    <option value="plot">Plot</option>
+                    <option value="commercial">Commercial</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Status *</label>
+                  <select name="status" value={form.status} onChange={handleChange} className="w-full border p-2 rounded">
+                    <option value="for_sale">For Sale</option>
+                    <option value="for_rent">For Rent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price (Rs.) *</label>
+                  <input name="price" type="number" value={form.price} onChange={handleChange} required className="w-full border p-2 rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Available From</label>
+                  <input name="availableFrom" type="date" value={form.availableFrom} onChange={handleChange} className="w-full border p-2 rounded" />
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-2">📍 Location</h3>
+                <input name="address" placeholder="Address" value={form.address} onChange={handleChange} required className="w-full border p-2 rounded mb-2" />
+                <div className="grid grid-cols-2 gap-4">
+                  <input name="city" placeholder="City" value={form.city} onChange={handleChange} required className="border p-2 rounded" />
+                  <input name="area" placeholder="Area" value={form.area} onChange={handleChange} required className="border p-2 rounded" />
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <input name="zipCode" placeholder="Zip Code" value={form.zipCode} onChange={handleChange} className="border p-2 rounded" />
+                  <input name="landmark" placeholder="Landmark" value={form.landmark} onChange={handleChange} className="border p-2 rounded" />
+                </div>
+              </div>
+
+              {/* Size & Rooms */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-2">📐 Size & Rooms</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <input name="sizeValue" type="number" placeholder="Size" value={form.sizeValue} onChange={handleChange} required className="border p-2 rounded" />
+                  <select name="sizeUnit" value={form.sizeUnit} onChange={handleChange} className="border p-2 rounded">
+                    <option value="marla">Marla</option>
+                    <option value="kanal">Kanal</option>
+                    <option value="sqft">Sq. Ft.</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  <input name="bedrooms" type="number" placeholder="Beds" value={form.bedrooms} onChange={handleChange} required className="border p-2 rounded" />
+                  <input name="bathrooms" type="number" placeholder="Baths" value={form.bathrooms} onChange={handleChange} required className="border p-2 rounded" />
+                  <input name="kitchens" type="number" placeholder="Kitchens" value={form.kitchens} onChange={handleChange} className="border p-2 rounded" />
+                  <input name="floors" type="number" placeholder="Floors" value={form.floors} onChange={handleChange} className="border p-2 rounded" />
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-2">🏠 Features</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <input name="yearBuilt" type="number" placeholder="Year Built" value={form.yearBuilt} onChange={handleChange} className="border p-2 rounded" />
+                  <select name="condition" value={form.condition} onChange={handleChange} className="border p-2 rounded">
+                    <option value="new">New</option>
+                    <option value="excellent">Excellent</option>
+                    <option value="good">Good</option>
+                    <option value="average">Average</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <input type="checkbox" name="isFurnished" checked={form.isFurnished} onChange={handleChange} />
+                  <label>Furnished</label>
+                  {form.isFurnished && (
+                    <select name="furnishedType" value={form.furnishedType} onChange={handleChange} className="border p-2 rounded ml-2">
+                      <option value="fully">Fully Furnished</option>
+                      <option value="semi">Semi Furnished</option>
+                      <option value="unfurnished">Unfurnished</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {/* Amenities */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-2">✨ Amenities</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {amenitiesList.map(amenity => (
+                    <label key={amenity} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={selectedAmenities.includes(amenity)} onChange={() => toggleAmenity(amenity)} />
+                      {amenity.replace("_", " ")}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nearby Places */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-2">📍 Nearby Places</h3>
+                {nearbyPlaces.map((place, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <input placeholder="Name" value={place.name} onChange={(e) => updateNearbyPlace(index, "name", e.target.value)} className="flex-1 border p-2 rounded" />
+                    <select value={place.type} onChange={(e) => updateNearbyPlace(index, "type", e.target.value)} className="border p-2 rounded">
+                      <option value="school">School</option>
+                      <option value="hospital">Hospital</option>
+                      <option value="mall">Mall</option>
+                      <option value="park">Park</option>
+                      <option value="mosque">Mosque</option>
+                      <option value="bank">Bank</option>
+                    </select>
+                    <input placeholder="Distance (e.g., 500m)" value={place.distance} onChange={(e) => updateNearbyPlace(index, "distance", e.target.value)} className="border p-2 rounded" />
+                    <button type="button" onClick={() => removeNearbyPlace(index)} className="bg-red-500 text-white px-3 rounded">✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addNearbyPlace} className="bg-green-500 text-white px-3 py-1 rounded text-sm">+ Add Nearby Place</button>
+              </div>
+
+              {/* Media */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-2">📷 Media</h3>
+                <input type="file" multiple onChange={handlePhotos} accept="image/*" className="w-full border p-2 rounded mb-2" />
+                <input type="file" onChange={handleVideo} accept="video/*" className="w-full border p-2 rounded" />
+              </div>
+
+              {/* Contact */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-2">📞 Contact</h3>
+                <input name="contactName" placeholder="Name" value={form.contactName} onChange={handleChange} required className="w-full border p-2 rounded mb-2" />
+                <input name="contactPhone" placeholder="Phone" value={form.contactPhone} onChange={handleChange} required className="w-full border p-2 rounded mb-2" />
+                <input name="contactWhatsapp" placeholder="WhatsApp" value={form.contactWhatsapp} onChange={handleChange} className="w-full border p-2 rounded mb-2" />
+                <input name="contactEmail" placeholder="Email" value={form.contactEmail} onChange={handleChange} className="w-full border p-2 rounded" />
+              </div>
+
+              {/* Submit Button */}
+              <button type="submit" disabled={submitting} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                {submitting ? "Saving..." : "Save Property"}
+              </button>
+            </form>
           </div>
         </div>
       )}
-    </>
-  );
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-function PropertyCard({ property: p, index, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        border: "1px solid #e4e4e7",
-        overflow: "hidden",
-        cursor: "pointer",
-        animation: `fadeUp 0.3s ease ${index * 0.04}s both`,
-        transition: "border-color 0.15s, transform 0.15s",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#d4a843"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e4e4e7"; e.currentTarget.style.transform = "translateY(0)"; }}
-    >
-      {/* Image */}
-      <div style={{ position: "relative", height: 200, background: "#18181b", overflow: "hidden" }}>
-        {p.photos?.[0] ? (
-          <img
-            src={p.photos[0]}
-            alt={p.title}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            onError={(e) => { e.target.style.display = "none"; }}
-          />
-        ) : (
-          <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, opacity: 0.4 }}>
-            {TYPE_ICONS[p.type] || "🏠"}
-          </div>
-        )}
-        <span style={{
-          position: "absolute", top: 10, left: 10,
-          background: p.status === "for_sale" ? "#166534" : "#1e40af",
-          color: "#fff",
-          fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20, letterSpacing: "0.5px", textTransform: "uppercase",
-        }}>
-          {p.status === "for_sale" ? "For Sale" : "For Rent"}
-        </span>
-        {p.videoUrl && (
-          <span style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 10, padding: "3px 8px", borderRadius: 20 }}>
-            🎥 Video
-          </span>
-        )}
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: "14px 16px 16px" }}>
-        <p style={{ fontSize: 14, fontWeight: 600, color: "#18181b", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.title}</p>
-        <p style={{ fontSize: 12, color: "#71717a", marginBottom: 8 }}>📍 {p.location?.city}, {p.location?.area}</p>
-        <p style={{ fontSize: 16, fontWeight: 700, color: "#16a34a", marginBottom: 10 }}>PKR {p.price?.toLocaleString("en-PK")}</p>
-        <div style={{ display: "flex", gap: 14, fontSize: 12, color: "#71717a", borderTop: "1px solid #f4f4f5", paddingTop: 10 }}>
-          <span>🛏 {p.bedrooms} bed</span>
-          <span>🚿 {p.bathrooms} bath</span>
-          <span>📐 {p.size?.value} {p.size?.unit}</span>
-        </div>
-      </div>
     </div>
   );
-}
-
-const Section = ({ label, children }) => (
-  <div style={{ marginBottom: 6 }}>
-    <p style={{ fontSize: 11, fontWeight: 600, color: "#d4a843", textTransform: "uppercase", letterSpacing: "0.8px", margin: "14px 0 8px" }}>{label}</p>
-    {children}
-  </div>
-);
-
-const Row = ({ children, cols = 1, span }) => (
-  <div style={{ display: "grid", gridTemplateColumns: span ? `1fr` : `repeat(${cols}, 1fr)`, gap: 8, marginBottom: 0 }}>
-    {children}
-  </div>
-);
-
-const Field = ({ label, children }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
-    <label style={{ fontSize: 11, fontWeight: 600, color: "#71717a" }}>{label}</label>
-    {children}
-  </div>
-);
-
-const Alert = ({ type, children }) => (
-  <div style={{
-    background: type === "error" ? "#fef2f2" : "#f0fdf4",
-    color: type === "error" ? "#b91c1c" : "#15803d",
-    border: `1px solid ${type === "error" ? "#fecaca" : "#bbf7d0"}`,
-    borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 12,
-  }}>
-    {children}
-  </div>
-);
-
-// ─── Shared style helpers ─────────────────────────────────────────────────────
-const iStyle = {
-  width: "100%",
-  padding: "8px 11px",
-  borderRadius: 8,
-  border: "1px solid #e4e4e7",
-  fontSize: 13,
-  color: "#18181b",
-  background: "#fff",
-  outline: "none",
 };
 
-const inputStyle = {
-  padding: "0 12px",
-  height: 40,
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.08)",
-  color: "#fff",
-  fontSize: 13,
-  outline: "none",
-  flex: 1,
-  minWidth: 150,
-};
-
-const selectStyle = {
-  padding: "0 12px",
-  height: 40,
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.08)",
-  color: "#fff",
-  fontSize: 13,
-  cursor: "pointer",
-  outline: "none",
-};
-
-const pgBtnStyle = (active) => ({
-  width: 34,
-  height: 34,
-  borderRadius: 8,
-  border: active ? "none" : "1px solid #e4e4e7",
-  background: active ? "#18181b" : "#fff",
-  color: active ? "#fff" : "#52525b",
-  cursor: "pointer",
-  fontSize: 13,
-  fontWeight: active ? 600 : 400,
-});
+export default HomePage;

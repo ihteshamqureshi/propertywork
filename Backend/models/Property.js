@@ -2,47 +2,76 @@ import mongoose from "mongoose";
 
 const propertySchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    type: {
-      type: String,
-      enum: ["house", "apartment", "plot", "commercial"],
-      required: true,
-    },
-    status: { type: String, enum: ["for_sale", "for_rent"], required: true },
+    // Basic Info
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    type: { type: String, required: true, enum: ["house", "apartment", "plot", "commercial"] },
+    status: { type: String, required: true, enum: ["for_sale", "for_rent"] },
     price: { type: Number, required: true },
+
+    // Dates
+    listedDate: { type: Date, default: Date.now },
+    availableFrom: Date,
+
+    // Location
     location: {
-      address: { type: String, required: true },
-      city: { type: String, required: true },
-      area: { type: String, required: true },
-      coordinates: {
-        lat: { type: Number },
-        lng: { type: Number },
-      },
+      address: String,
+      city: String,
+      area: String,
+      zipCode: String,
+      landmark: String,
     },
-    size: {
-      value: { type: Number, required: true },
-      unit: { type: String, enum: ["marla", "kanal", "sqft"], required: true },
+
+    // Nearby Places - Array of objects (CORRECT WAY)
+    nearby: {
+      type: [
+        {
+          name: { type: String },
+          type: { type: String },
+          distance: { type: String },
+        }
+      ],
+      default: []
     },
-    bedrooms: { type: Number, required: true },
-    bathrooms: { type: Number, required: true },
-    photos: {
+
+    // Amenities - Array of strings
+    amenities: {
       type: [String],
-      validate: [(arr) => arr.length >= 1, "At least 1 photo is required"],
+      default: []
     },
-    videos: {
-      type: [String],
-      default: [],
-    },
+
+    // Size & Rooms
+    size: { value: Number, unit: String },
+    bedrooms: Number,
+    bathrooms: Number,
+    kitchens: { type: Number, default: 1 },
+    floors: { type: Number, default: 1 },
+
+    // Features
+    yearBuilt: Number,
+    condition: String,
+    isFurnished: { type: Boolean, default: false },
+    furnishedType: String,
+
+    // Media
+    photos: [String],
+    videoUrl: String,
+
+    // Contact
     contact: {
-      name: { type: String, required: true },
-      phone: { type: String, required: true },
-      whatsapp: { type: String },
+      name: String,
+      phone: String,
+      whatsapp: String,
+      email: String,
     },
+
+    // Status
+    views: { type: Number, default: 0 },
+    isFeatured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
 const Property = mongoose.model("Property", propertySchema);
-
 export default Property;
