@@ -1,7 +1,5 @@
-// src/pages/PropertyForm.jsx
-
 import React, { useState } from "react";
-import axios from "axios";
+import API from "../services/api";
 
 const PropertyForm = () => {
   const [formData, setFormData] = useState({
@@ -50,50 +48,69 @@ const PropertyForm = () => {
     try {
       const data = new FormData();
 
+      // BASIC
       data.append("title", formData.title);
       data.append("type", formData.type);
       data.append("status", formData.status);
       data.append("price", formData.price);
 
+      // LOCATION
       data.append("location[address]", formData.address);
       data.append("location[city]", formData.city);
       data.append("location[area]", formData.area);
 
-      data.append("location[coordinates][lat]", formData.lat);
-      data.append("location[coordinates][lng]", formData.lng);
+      data.append(
+        "location[coordinates][lat]",
+        formData.lat
+      );
 
+      data.append(
+        "location[coordinates][lng]",
+        formData.lng
+      );
+
+      // SIZE
       data.append("size[value]", formData.sizeValue);
       data.append("size[unit]", formData.sizeUnit);
 
+      // ROOMS
       data.append("bedrooms", formData.bedrooms);
       data.append("bathrooms", formData.bathrooms);
 
+      // CONTACT
       data.append("contact[name]", formData.contactName);
       data.append("contact[phone]", formData.phone);
-      data.append("contact[whatsapp]", formData.whatsapp);
+      data.append(
+        "contact[whatsapp]",
+        formData.whatsapp
+      );
 
       // FILES
       for (let i = 0; i < files.length; i++) {
         data.append("files", files[i]);
       }
 
-      const res = await axios.post(
-        "/api/properties",
-        data,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+      // API CALL
+      const res = await API.post(
+        "/properties",
+        data
+        // {
+        //   headers: {
+        //     "Content-Type": "multipart/form-data",
+        //   },
+        // }
       );
 
       console.log(res.data);
 
       alert("Property Created Successfully");
-
     } catch (error) {
       console.log(error);
-      alert("Error Creating Property");
+
+      alert(
+        error?.response?.data?.message ||
+        "Error Creating Property"
+      );
     }
   };
 

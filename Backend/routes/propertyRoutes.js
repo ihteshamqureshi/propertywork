@@ -1,33 +1,29 @@
 import express from "express";
+import { handleUpload } from "../middleware/upload.js";
 
 import {
   createProperty,
-  getProperties,
+  getAllProperties,
   getPropertyById,
   updateProperty,
   deleteProperty,
 } from "../controllers/property.controller.js";
-
-import { upload } from "../middleware/upload.js";
-
+  
 const router = express.Router();
-// Update backend to match frontend
-router.post(
-  "/createProperties",
-  upload.array("images", 10),  // Changed from "files" to "images"
-  createProperty
-);
 
-router.get("/", getProperties);
+// GET  /api/properties        → Find All (with filters & pagination)
+router.get("/", getAllProperties);
 
+// GET  /api/properties/:id    → Find One
 router.get("/:id", getPropertyById);
 
-router.put(
-  "/:id",
-  upload.array("files", 10),
-  updateProperty
-);
+// POST /api/properties        → Create (with photo + video upload)
+router.post("/", handleUpload, createProperty);
 
+// PUT  /api/properties/:id    → Update (with optional new photo/video)
+router.put("/:id", handleUpload, updateProperty);
+
+// DELETE /api/properties/:id  → Delete (also removes files from disk)
 router.delete("/:id", deleteProperty);
 
 export default router;
