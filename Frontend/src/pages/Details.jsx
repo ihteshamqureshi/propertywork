@@ -1,14 +1,33 @@
-import React, { useState, useEffect } from "react";
+
+
+
+import  { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPropertyById, updateProperty, deleteProperty } from "../services/api";
+
+
+
 
 // Simple SVG fallback images
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='400' viewBox='0 0 700 400'%3E%3Crect width='700' height='400' fill='%23f3f4f6'/%3E%3Ctext x='350' y='200' font-family='Arial' font-size='20' fill='%239ca3af' text-anchor='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
 const FALLBACK_THUMB = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='60' viewBox='0 0 80 60'%3E%3Crect width='80' height='60' fill='%23f3f4f6'/%3E%3Ctext x='40' y='35' font-family='Arial' font-size='12' fill='%239ca3af' text-anchor='middle'%3ENo%3C/text%3E%3C/svg%3E";
 
+
+
+
+
+
 const DetailsPage = () => {
+
+
+
+
   const { id } = useParams();
   const navigate = useNavigate();
+
+
+
+
 
   // States
   const [property, setProperty] = useState(null);
@@ -24,12 +43,25 @@ const DetailsPage = () => {
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
   const [selectedAmenities, setSelectedAmenities] = useState([]);
 
+
+
+
+
+
+
   // Available amenities list
   const amenitiesList = [
     "parking", "gym", "security", "swimming_pool", "elevator",
-    "backup_electricity", "gas_connection", "water_supply", 
+    "backup_electricity", "gas_connection", "water_supply",
     "internet", "cctv", "air_conditioning", "heating"
   ];
+
+
+
+
+
+
+
 
   useEffect(() => {
     fetchProperty();
@@ -69,7 +101,7 @@ const DetailsPage = () => {
         contactWhatsapp: propertyData.contact?.whatsapp || "",
         contactEmail: propertyData.contact?.email || "",
       });
-      
+
       setNearbyPlaces(propertyData.nearby || []);
       setSelectedAmenities(propertyData.amenities || []);
     } catch (err) {
@@ -79,6 +111,11 @@ const DetailsPage = () => {
     }
   };
 
+
+
+
+
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({
@@ -87,21 +124,39 @@ const DetailsPage = () => {
     });
   };
 
+
+
+
+
+
   // Nearby places functions
   const addNearbyPlace = () => {
     setNearbyPlaces([...nearbyPlaces, { name: "", type: "school", distance: "" }]);
   };
+
+
+
 
   const removeNearbyPlace = (index) => {
     const updated = nearbyPlaces.filter((_, i) => i !== index);
     setNearbyPlaces(updated);
   };
 
+
+
+
+
   const updateNearbyPlace = (index, field, value) => {
     const updated = [...nearbyPlaces];
     updated[index][field] = value;
     setNearbyPlaces(updated);
   };
+
+
+
+
+
+
 
   // Toggle amenities
   const toggleAmenity = (amenity) => {
@@ -112,6 +167,14 @@ const DetailsPage = () => {
     }
   };
 
+
+
+
+
+
+
+
+
   const handleUpdate = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -119,18 +182,18 @@ const DetailsPage = () => {
 
     try {
       const formData = new FormData();
-      
+
       // Basic fields
       Object.keys(form).forEach((key) => {
         formData.append(key, form[key]);
       });
-      
+
       // Nearby places
       formData.append("nearby", JSON.stringify(nearbyPlaces));
-      
+
       // Amenities
       formData.append("amenities", JSON.stringify(selectedAmenities));
-      
+
       // Files
       newPhotos.forEach((photo) => formData.append("photos", photo));
       if (newVideo) formData.append("video", newVideo);
@@ -147,6 +210,12 @@ const DetailsPage = () => {
     }
   };
 
+
+
+
+
+
+
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this property?")) return;
     try {
@@ -156,6 +225,11 @@ const DetailsPage = () => {
       alert(err.message);
     }
   };
+
+
+
+
+
 
   if (loading) {
     return (
@@ -173,14 +247,37 @@ const DetailsPage = () => {
     );
   }
 
+
+
+
   if (!property) return null;
+
+
 
   const photos = property.photos || [];
   const hasPhotos = photos.length > 0;
   const currentPhoto = hasPhotos ? photos[activePhoto] : null;
 
+
+
+
+
+
+
+
+
+
   return (
+
+
+
     <div className="min-h-screen bg-gray-100 p-5 font-sans">
+
+
+
+
+
+
       {/* Back Button */}
       <button
         onClick={() => navigate("/")}
@@ -189,12 +286,24 @@ const DetailsPage = () => {
         ← Back to Listings
       </button>
 
+
+
+
+
       {/* Success Message */}
       {successMsg && (
         <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
           ✅ {successMsg}
         </div>
       )}
+
+
+
+
+
+
+
+
 
       {/* View Mode */}
       {!editMode && (
@@ -220,6 +329,13 @@ const DetailsPage = () => {
                 )}
               </div>
 
+
+
+
+
+
+
+
               {/* Thumbnails */}
               {hasPhotos && photos.length > 1 && (
                 <div className="flex gap-2 mt-3 flex-wrap">
@@ -238,6 +354,11 @@ const DetailsPage = () => {
                 </div>
               )}
 
+
+
+
+
+
               {/* Video Player */}
               {property.videoUrl && (
                 <div className="mt-4">
@@ -248,6 +369,12 @@ const DetailsPage = () => {
                 </div>
               )}
             </div>
+
+
+
+
+
+
 
             {/* Right Column - Property Info */}
             <div className="lg:w-1/2 space-y-4">
@@ -264,6 +391,13 @@ const DetailsPage = () => {
                 </div>
               </div>
 
+
+
+
+
+
+
+
               {/* Description */}
               <div>
                 <h3 className="font-semibold text-gray-700 mb-2">📝 Description</h3>
@@ -274,6 +408,12 @@ const DetailsPage = () => {
               <h3 className="text-3xl font-bold text-blue-600">
                 Rs. {property.price?.toLocaleString() || property.price}
               </h3>
+
+
+
+
+
+
 
               {/* Property Details Grid */}
               <div className="grid grid-cols-2 gap-3">
@@ -318,6 +458,10 @@ const DetailsPage = () => {
                 )}
               </div>
 
+
+
+
+
               {/* Amenities */}
               {property.amenities?.length > 0 && (
                 <div>
@@ -331,6 +475,11 @@ const DetailsPage = () => {
                   </div>
                 </div>
               )}
+
+
+
+
+
 
               {/* Nearby Places */}
               {property.nearby?.length > 0 && (
@@ -352,6 +501,11 @@ const DetailsPage = () => {
                 </div>
               )}
 
+
+
+
+
+
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-yellow-50 p-3 rounded-lg">
@@ -363,6 +517,10 @@ const DetailsPage = () => {
                   </div>
                 )}
               </div>
+
+
+
+
 
               {/* Contact Information */}
               <div className="bg-blue-50 p-4 rounded-lg">
@@ -377,10 +535,17 @@ const DetailsPage = () => {
                 )}
               </div>
 
+
+
+
               {/* Views Counter */}
               <div className="bg-gray-100 p-3 rounded-lg text-center">
                 <p className="text-sm text-gray-600">👁️ Viewed {property.views || 0} times</p>
               </div>
+
+
+
+
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
@@ -397,10 +562,30 @@ const DetailsPage = () => {
                   🗑️ Delete Property
                 </button>
               </div>
+
+
+
+
             </div>
+
           </div>
+
+
         </div>
+
+
+
       )}
+
+
+
+
+
+
+
+
+
+
 
       {/* Edit Mode Form */}
       {editMode && (
@@ -507,6 +692,13 @@ const DetailsPage = () => {
               </div>
             </div>
 
+
+
+
+
+
+
+
             {/* Amenities */}
             <div className="border-t pt-4">
               <h3 className="font-bold mb-2">✨ Amenities</h3>
@@ -519,6 +711,12 @@ const DetailsPage = () => {
                 ))}
               </div>
             </div>
+
+
+
+
+
+
 
             {/* Nearby Places */}
             <div className="border-t pt-4">
@@ -541,7 +739,12 @@ const DetailsPage = () => {
               <button type="button" onClick={addNearbyPlace} className="bg-green-500 text-white px-3 py-1 rounded text-sm">+ Add Nearby Place</button>
             </div>
 
+
+
+
+
             {/* Media */}
+
             <div className="border-t pt-4">
               <h3 className="font-bold mb-2">📷 Media</h3>
               <input type="file" multiple onChange={(e) => setNewPhotos(Array.from(e.target.files))} accept="image/*" className="w-full border p-2 rounded mb-2" />
@@ -549,6 +752,11 @@ const DetailsPage = () => {
               <input type="file" onChange={(e) => setNewVideo(e.target.files[0])} accept="video/*" className="w-full border p-2 rounded" />
               {newVideo && <p className="text-sm text-blue-600">New video: {newVideo.name}</p>}
             </div>
+
+
+
+
+
 
             {/* Contact */}
             <div className="border-t pt-4">
@@ -558,6 +766,10 @@ const DetailsPage = () => {
               <input name="contactWhatsapp" placeholder="WhatsApp" value={form.contactWhatsapp} onChange={handleChange} className="w-full border p-2 rounded mb-2" />
               <input name="contactEmail" placeholder="Email" value={form.contactEmail} onChange={handleChange} className="w-full border p-2 rounded" />
             </div>
+
+
+
+
 
             {/* Buttons */}
             <div className="flex gap-3 pt-4">
@@ -569,10 +781,38 @@ const DetailsPage = () => {
               </button>
             </div>
           </form>
+
+
+
+
+
+
         </div>
+
+
+
+
+
+
+
+
       )}
+
+
+
+
     </div>
+
+
+
+
   );
+
+
+
 };
+
+
+
 
 export default DetailsPage;

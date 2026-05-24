@@ -1,3 +1,6 @@
+
+
+
 import {
     Home,
     CheckCircle,
@@ -5,27 +8,53 @@ import {
     User,
     Mail,
     Lock,
-    LogIn,
+
+
 
 } from "lucide-react";
+
+
+
+
 import api from "../services/api";
+
+
+
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, } from "react-router-dom";
 import { gsap } from "gsap";
 import { Link } from "react-router-dom";
 
+
+
+
+
+
 function Signup() {
+
+
+
     const navigate = useNavigate();
+
+
 
     const leftRef = useRef(null);
     const rightRef = useRef(null);
+
+
+
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [msg, setMsg] = useState("");
     const [loading, setLoading] = useState(false);
+
+
+
+
+
 
     // ANIMATION (SAFE)
     useEffect(() => {
@@ -44,10 +73,18 @@ function Signup() {
         }
     }, []);
 
+
+
+
+
     // SUBMIT
     const handleSubmit = async (e) => {
+
+
         e.preventDefault();
         setMsg("");
+
+
 
         if (!name || !email || !password) {
             setMsg("All fields are required");
@@ -73,10 +110,25 @@ function Signup() {
         } finally {
             setLoading(false);
         }
+
+
+
     };
 
+
+
+
+
+
     return (
+
+
+
+
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative px-4 py-8">
+
+
+
 
             {/* BACKGROUND */}
             <div className="absolute inset-0 opacity-10">
@@ -84,8 +136,13 @@ function Signup() {
                 <div className="absolute bottom-32 right-20 w-48 h-48 border border-white/20 rounded-lg"></div>
             </div>
 
+
+
+
             {/* MAIN CARD */}
             <div className="relative z-10 w-full max-w-[1000px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+
+
 
                 <div className="flex flex-col md:flex-row">
 
@@ -119,6 +176,12 @@ function Signup() {
                         </div>
                     </div>
 
+
+
+
+
+
+
                     {/* RIGHT */}
                     <div
                         ref={rightRef}
@@ -147,6 +210,9 @@ function Signup() {
                                 </div>
                             </div>
 
+
+
+
                             {/* EMAIL */}
                             <div>
                                 <label className="text-sm text-gray-300">Email</label>
@@ -162,6 +228,8 @@ function Signup() {
                                 </div>
                             </div>
 
+
+
                             {/* PASSWORD */}
                             <div>
                                 <label className="text-sm text-gray-300">Password</label>
@@ -176,6 +244,10 @@ function Signup() {
                                     />
                                 </div>
                             </div>
+
+
+
+
 
                             {/* BUTTON */}
                             <button
@@ -193,18 +265,49 @@ function Signup() {
                                 </Link>
                             </p>
 
+
+
+
                             {/* ERROR */}
                             {msg && (
                                 <p className="text-red-400 text-sm text-center">{msg}</p>
                             )}
+
+
+
                         </form>
+
+
                     </div>
 
+
+
                 </div>
+
+
             </div>
+
+
+
+
         </div>
+
+
+
+
+
     );
 
+
 }
+
+
+
+
+
+
+
+
+
 
 export default Signup;

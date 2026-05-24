@@ -1,4 +1,9 @@
-import React, { useState } from "react";
+
+
+import { useState } from "react";
+
+
+
 import {
   Home,
   Info,
@@ -7,9 +12,15 @@ import {
   LogIn,
   UserPlus,
 } from "lucide-react";
+
+
 import { Link, useLocation } from "react-router-dom";
 
+
+
+
 const Navbar = () => {
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -32,16 +43,24 @@ const Navbar = () => {
         : "text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-indigo-600"
     }`;
 
+
+
+
+
+
   return (
+
+
+
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
 
-        {/* MAIN BAR */}
+       
         <div className="flex items-center justify-between h-16">
 
 
 
-          {/* LEFT - LOGO */}
+        
           <Link to="/" className="flex items-center gap-2">
             <div className="w-11 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">SSI-P</span>
@@ -54,7 +73,7 @@ const Navbar = () => {
 
 
 
-          {/* CENTER - NAV LINKS (PROFESSIONAL FIX) */}
+       
           <div className="hidden md:flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2">
 
             <Link to="/" className={navClass("/")}>
@@ -71,7 +90,7 @@ const Navbar = () => {
 
 
 
-          {/* RIGHT - AUTH LINKS */}
+    
           <div className="hidden md:flex items-center gap-2">
 
             <Link to="/login" className={navClass("/login")}>
@@ -88,7 +107,7 @@ const Navbar = () => {
 
 
 
-          {/* MOBILE BUTTON */}
+          
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
@@ -100,7 +119,7 @@ const Navbar = () => {
 
 
 
-        {/* MOBILE MENU */}
+     
         {isMenuOpen && (
           <div className="md:hidden border-t py-4">
 

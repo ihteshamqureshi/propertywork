@@ -18,21 +18,38 @@ import authRoutes from "./routes/authRoutes.js";
 
 const app = express();
 
-// ================= DB =================
+// DB 
 connectDB();
 
-// ================= __dirname FIX =================
+
+
+
+
+//  __dirname FIX 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ================= MIDDLEWARE =================
+
+
+
+
+
+
+
+
 
 // JSON body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+
+
 // COOKIE PARSER (IMPORTANT FOR AUTH)
 app.use(cookieParser());
+
+
+
 
 // CORS FIX (IMPORTANT FOR FRONTEND AUTH)
 app.use(
@@ -42,14 +59,20 @@ app.use(
   })
 );
 
+
+
+
 // STATIC FILES (UPLOADS)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ================= ROUTES =================
+
+
+
+// ROUTES 
 app.use("/api/properties", propertyRoutes);
 app.use("/api/auth", authRoutes);
 
-// ================= SERVER =================
+
 
 const PORT = process.env.PORT || 5000;
 

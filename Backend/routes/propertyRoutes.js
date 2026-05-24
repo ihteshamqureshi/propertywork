@@ -1,5 +1,12 @@
+
+
+
 import express from "express";
+
+
 import { uploadFields } from "../middleware/upload.js";
+
+
 import {
   createProperty,
   getAllProperties,
@@ -8,9 +15,14 @@ import {
   deleteProperty,
 } from "../controllers/property.Controller.js";
 
+
+
 const router = express.Router();
 
+
+
 // Routes
+
 
 // Create new property (with photos & video)
 router.post("/", uploadFields, createProperty);
@@ -26,5 +38,9 @@ router.put("/:id", uploadFields, updateProperty);
 
 // Delete property
 router.delete("/:id", deleteProperty);
+
+
+
+
 
 export default router;

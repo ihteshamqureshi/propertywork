@@ -44,8 +44,12 @@
 import jwt from "jsonwebtoken";
 
 const authMiddleware = (req, res, next) => {
+
+
   // Get token from cookie
   const token = req.cookies.token;
+
+
 
   // Check if token exists
   if (!token) {
@@ -53,6 +57,8 @@ const authMiddleware = (req, res, next) => {
       message: "Please login first"
     });
   }
+
+
 
   try {
     // Verify token
@@ -67,6 +73,15 @@ const authMiddleware = (req, res, next) => {
       message: "Invalid token"
     });
   }
+
+
+
 };
+
+
+
+
+
+
 
 export default authMiddleware;

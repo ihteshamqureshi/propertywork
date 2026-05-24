@@ -1,12 +1,17 @@
 
 import axios from "axios";
 
+
 const api = axios.create({
   baseURL: "http://localhost:5000/api",
   withCredentials: true,
 });
 
+
+
 export default api;
+
+
 
 /* ---------------- AUTH ---------------- */
 
@@ -17,6 +22,9 @@ export const login = (data) => api.post("/auth/login", data);
 export const getMe = () => api.get("/auth/me");
 
 export const logout = () => api.post("/auth/logout");
+
+
+
 
 
 /* ---------------- PROPERTIES ---------------- */
@@ -46,3 +54,9 @@ export const deleteProperty = async (id) => {
   return res.data;
 
 };
+
+
+
+
+
+

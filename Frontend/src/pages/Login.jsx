@@ -1,23 +1,38 @@
+
+
+
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import api from "../services/api";
 import { useNavigate, Link } from "react-router-dom";
 
+
+
 import { Home, Eye, EyeOff, UserPlus, Mail, Lock } from "lucide-react"; 
 
+
+
+
 function Login() {
+
+
+
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState("");
-    const [showPassword, setShowPassword] = useState(false); // ✅ small 's' showPassword
+    const [showPassword, setShowPassword] = useState(false); 
 
     const cardRef = useRef(null);
     const leftRef = useRef(null);
     const rightRef = useRef(null);
 
     const navigate = useNavigate();
+
+
+
+
 
     // ANIMATION
     useEffect(() => {
@@ -40,9 +55,19 @@ function Login() {
         );
     }, []);
 
+
+
+
+
     // LOGIN
     const handleSubmit = async (e) => {
-        e.preventDefault(); // ✅ Important: prevent page refresh
+
+
+
+
+        e.preventDefault(); 
+
+
         
         setMsg("");
 
@@ -68,10 +93,24 @@ function Login() {
         } finally {
             setLoading(false);
         }
+
+
+
     };
 
+
+
+
+
+
     return (
+
+
+
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative px-4 py-8">
+
+
+
             {/* Property Themed Background */}
             <div className="absolute inset-0 opacity-10">
                 <div className="absolute top-20 left-10 w-32 h-32 border-2 border-white/20 rounded-lg"></div>
@@ -79,22 +118,41 @@ function Login() {
                 <div className="absolute top-1/2 left-1/3 w-24 h-24 border-2 border-white/10 rounded-md"></div>
             </div>
 
+
+
+
             {/* GLOW EFFECTS */}
             <div className="absolute w-[600px] h-[600px] bg-blue-500/20 blur-[120px] rounded-full"></div>
             <div className="absolute w-[500px] h-[500px] bg-purple-600/20 blur-[120px] rounded-full"></div>
             <div className="absolute w-[400px] h-[400px] bg-indigo-500/10 blur-[100px] rounded-full bottom-0 right-0"></div>
+
+
+
+
+
+
 
             {/* MAIN CARD */}
             <div
                 ref={cardRef}
                 className="relative z-10 w-full max-w-[1000px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
             >
+
+
+
                 <div className="flex flex-col md:flex-row">
+
+
+
                     {/* LEFT SECTION - LOGIN FORM */}
                     <div
                         ref={leftRef}
                         className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center text-white bg-white/5"
                     >
+
+
+
+
                         <div className="mb-6">
                             <div className="flex items-center gap-2 mb-6">
                                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
@@ -105,6 +163,9 @@ function Login() {
                             <h2 className="text-3xl font-bold mb-2">Welcome Back! 👋</h2>
                             <p className="text-gray-400 text-sm">Login to access your property dashboard</p>
                         </div>
+
+
+
 
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
@@ -120,6 +181,10 @@ function Login() {
                                     />
                                 </div>
                             </div>
+
+
+
+
 
                             <div>
                                 <label className="block text-gray-300 text-sm font-medium mb-2">Password</label>
@@ -146,11 +211,21 @@ function Login() {
                                 </div>
                             </div>
 
+
+
+
+
+
+
+
                             <div className="flex justify-end">
                                 <Link to="/forgot-password" className="text-xs text-blue-400 hover:underline">
                                     Forgot Password?
                                 </Link>
                             </div>
+
+
+
 
                             <button
                                 type="submit"
@@ -172,15 +247,32 @@ function Login() {
                                 <p className="text-center text-sm text-red-400 bg-red-500/10 py-2 rounded-lg">
                                     {msg}
                                 </p>
+
+
                             )}
+
+
+
+
                         </form>
+
+
+
                     </div>
+
+
+
+
+
+
 
                     {/* RIGHT SECTION - ILLUSTRATION */}
                     <div
                         ref={rightRef}
                         className="w-full md:w-1/2 flex items-center justify-center bg-gradient-to-br from-blue-900/40 to-purple-900/80 p-8"
                     >
+
+
                         <div className="text-center">
                             <img
                                 src="/login.png"
@@ -197,11 +289,38 @@ function Login() {
                                 </div>
                             </div>
                         </div>
+
+
+
+
                     </div>
+
                 </div>
+
+
             </div>
+
+
+
         </div>
+
+
+
+
     );
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
 
 export default Login;

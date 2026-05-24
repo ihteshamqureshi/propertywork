@@ -25,6 +25,8 @@
 
 
 const adminMiddleware = (req, res, next) => {
+
+
   // Check if user exists (auth middleware se aana chahiye)
   if (!req.user) {
     return res.status(401).json({
@@ -32,6 +34,8 @@ const adminMiddleware = (req, res, next) => {
       message: "Unauthorized. Please login first.",
     });
   }
+
+
 
   // Check if user has admin role
   if (req.user.role !== "admin") {
@@ -41,7 +45,14 @@ const adminMiddleware = (req, res, next) => {
     });
   }
 
+
   next();
+
+
 };
+
+
+
+
 
 export default adminMiddleware;

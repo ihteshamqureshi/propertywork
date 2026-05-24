@@ -1,8 +1,20 @@
+
+
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAllProperties, createProperty, deleteProperty } from "../services/api";
 
+
+
+
+
+
 const HomePage = () => {
+
+
+
+
   const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,6 +22,13 @@ const HomePage = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+
+
+
+
+
+
+
 
   // Form state with all new fields
   const [form, setForm] = useState({
@@ -40,14 +59,26 @@ const HomePage = () => {
     contactEmail: "",
   });
 
+
+
   // For nearby places
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
   
+
+
+
   // For amenities
   const [selectedAmenities, setSelectedAmenities] = useState([]);
   
+
+
+
   const [photos, setPhotos] = useState([]);
   const [video, setVideo] = useState(null);
+
+
+
+
 
   // Available amenities list
   const amenitiesList = [
@@ -56,9 +87,21 @@ const HomePage = () => {
     "internet", "cctv", "air_conditioning", "heating"
   ];
 
+
+
+
+
+
+
   useEffect(() => {
     fetchProperties();
   }, []);
+
+
+
+
+
+
 
   const fetchProperties = async () => {
     try {
@@ -72,6 +115,13 @@ const HomePage = () => {
     }
   };
 
+
+
+
+
+
+
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({
@@ -80,21 +130,37 @@ const HomePage = () => {
     });
   };
 
+
+
+
+
   // Nearby places functions
   const addNearbyPlace = () => {
     setNearbyPlaces([...nearbyPlaces, { name: "", type: "school", distance: "" }]);
   };
+
+
+
+
 
   const removeNearbyPlace = (index) => {
     const updated = nearbyPlaces.filter((_, i) => i !== index);
     setNearbyPlaces(updated);
   };
 
+
+
+
+
   const updateNearbyPlace = (index, field, value) => {
     const updated = [...nearbyPlaces];
     updated[index][field] = value;
     setNearbyPlaces(updated);
   };
+
+
+
+
 
   // Toggle amenities
   const toggleAmenity = (amenity) => {
@@ -112,6 +178,14 @@ const HomePage = () => {
   const handleVideo = (e) => {
     setVideo(e.target.files[0]);
   };
+
+
+
+
+
+
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -149,6 +223,15 @@ const HomePage = () => {
     }
   };
 
+
+
+
+
+
+
+
+
+
   const resetForm = () => {
     setForm({
       title: "",
@@ -183,6 +266,11 @@ const HomePage = () => {
     setVideo(null);
   };
 
+
+
+
+
+
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this property?")) return;
     try {
@@ -193,7 +281,18 @@ const HomePage = () => {
     }
   };
 
+
+
+
+
+
+
+
   return (
+
+
+
+
     <div className="min-h-screen bg-gray-100 p-5 font-sans">
       {/* Header */}
       <div className="flex justify-between items-center mb-5">
@@ -227,6 +326,9 @@ const HomePage = () => {
         <div className="text-center text-gray-600 py-10">No properties found. Add one!</div>
       )}
 
+
+
+
       {/* Property Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {properties.map((property) => (
@@ -244,6 +346,9 @@ const HomePage = () => {
                 <div className="text-gray-500">No Image</div>
               )}
             </div>
+
+
+
 
             {/* Card Body */}
             <div className="p-4">
@@ -275,8 +380,16 @@ const HomePage = () => {
                     </span>
                   )}
                 </div>
+
+
               )}
+
+
             </div>
+
+
+
+
 
             {/* Card Actions */}
             <div className="flex gap-2 p-4 pt-0">
@@ -293,12 +406,32 @@ const HomePage = () => {
                 Delete
               </button>
             </div>
+
+
           </div>
+
+
+
         ))}
+
+
+
       </div>
+
+
+
+
+
+
+
+
+
 
       {/* Add Property Popup */}
       {showPopup && (
+
+
+
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Popup Header */}
@@ -314,6 +447,13 @@ const HomePage = () => {
                 ✕
               </button>
             </div>
+
+
+
+
+
+
+
 
             {/* Popup Body */}
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -430,6 +570,11 @@ const HomePage = () => {
                 </div>
               </div>
 
+
+
+
+
+
               {/* Amenities */}
               <div className="border-t pt-4">
                 <h3 className="font-bold mb-2">✨ Amenities</h3>
@@ -442,6 +587,13 @@ const HomePage = () => {
                   ))}
                 </div>
               </div>
+
+
+
+
+
+
+
 
               {/* Nearby Places */}
               <div className="border-t pt-4">
@@ -464,12 +616,22 @@ const HomePage = () => {
                 <button type="button" onClick={addNearbyPlace} className="bg-green-500 text-white px-3 py-1 rounded text-sm">+ Add Nearby Place</button>
               </div>
 
+
+
+
+
+
               {/* Media */}
               <div className="border-t pt-4">
                 <h3 className="font-bold mb-2">📷 Media</h3>
                 <input type="file" multiple onChange={handlePhotos} accept="image/*" className="w-full border p-2 rounded mb-2" />
                 <input type="file" onChange={handleVideo} accept="video/*" className="w-full border p-2 rounded" />
               </div>
+
+
+
+
+
 
               {/* Contact */}
               <div className="border-t pt-4">
@@ -480,16 +642,47 @@ const HomePage = () => {
                 <input name="contactEmail" placeholder="Email" value={form.contactEmail} onChange={handleChange} className="w-full border p-2 rounded" />
               </div>
 
+
+
+
               {/* Submit Button */}
               <button type="submit" disabled={submitting} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
                 {submitting ? "Saving..." : "Save Property"}
               </button>
+
+
+
+
             </form>
+
+
+
+
           </div>
+
+
+
         </div>
+
+
+
       )}
+
+
+
+
     </div>
+
+
+
+
+
   );
+
+
 };
+
+
+
 
 export default HomePage;

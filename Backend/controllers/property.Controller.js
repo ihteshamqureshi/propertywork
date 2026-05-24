@@ -1,3 +1,7 @@
+
+
+
+
 import Property from "../models/Property.js";
 
 // Helper: build public URL for a file
@@ -5,11 +9,16 @@ const getFileUrl = (req, filename) => {
   return `${req.protocol}://${req.get("host")}/uploads/${filename}`;
 };
 
-// ================= 1. CREATE PROPERTY =================
+//  CREATE PROPERTY 
 export const createProperty = async (req, res) => {
+
   try {
+
+
     const photoFiles = req.files?.["photos"] || [];
     const videoFile = req.files?.["video"]?.[0] || null;
+
+
 
     if (photoFiles.length === 0) {
       return res.status(400).json({
@@ -18,20 +27,30 @@ export const createProperty = async (req, res) => {
       });
     }
 
+
+
+
     const photoUrls = photoFiles.map((file) => getFileUrl(req, file.filename));
     const videoUrl = videoFile ? getFileUrl(req, videoFile.filename) : null;
+
+
+
 
     // Parse nearby places
     let nearbyPlaces = [];
     if (req.body.nearby) {
       try {
-        nearbyPlaces = typeof req.body.nearby === 'string' 
-          ? JSON.parse(req.body.nearby) 
+        nearbyPlaces = typeof req.body.nearby === 'string'
+          ? JSON.parse(req.body.nearby)
           : req.body.nearby;
       } catch (error) {
         nearbyPlaces = [];
       }
     }
+
+
+
+
 
     // Parse amenities
     let amenitiesList = [];
@@ -45,13 +64,19 @@ export const createProperty = async (req, res) => {
       }
     }
 
+
+
+
+
     const propertyData = {
+
+
       title: req.body.title,
       description: req.body.description,
       type: req.body.type,
       status: req.body.status,
       price: req.body.price,
-      
+
       location: {
         address: req.body.address,
         city: req.body.city,
@@ -59,10 +84,10 @@ export const createProperty = async (req, res) => {
         zipCode: req.body.zipCode,
         landmark: req.body.landmark,
       },
-      
+
       nearby: nearbyPlaces,
       amenities: amenitiesList,
-      
+
       size: {
         value: req.body.sizeValue,
         unit: req.body.sizeUnit,
@@ -71,17 +96,17 @@ export const createProperty = async (req, res) => {
       bathrooms: req.body.bathrooms,
       kitchens: req.body.kitchens || 1,
       floors: req.body.floors || 1,
-      
+
       yearBuilt: req.body.yearBuilt,
       condition: req.body.condition,
       isFurnished: req.body.isFurnished === "true" || req.body.isFurnished === true,
       furnishedType: req.body.furnishedType,
-      
+
       availableFrom: req.body.availableFrom || null,
-      
+
       photos: photoUrls,
       videoUrl: videoUrl,
-      
+
       contact: {
         name: req.body.contactName,
         phone: req.body.contactPhone,
@@ -89,6 +114,10 @@ export const createProperty = async (req, res) => {
         email: req.body.contactEmail || "",
       },
     };
+
+
+
+
 
     const property = new Property(propertyData);
     await property.save();
@@ -99,6 +128,10 @@ export const createProperty = async (req, res) => {
       property: property,
     });
 
+
+
+
+
   } catch (error) {
     console.error("Create Property Error:", error.message);
     res.status(500).json({
@@ -108,15 +141,27 @@ export const createProperty = async (req, res) => {
   }
 };
 
-// ================= 2. GET ALL PROPERTIES =================
+
+
+
+
+
+//  GET ALL PROPERTIES 
 export const getAllProperties = async (req, res) => {
+
+
   try {
+
+
     const filter = { isActive: true };
 
     if (req.query.city) filter["location.city"] = req.query.city;
     if (req.query.type) filter.type = req.query.type;
     if (req.query.status) filter.status = req.query.status;
-    
+
+
+
+
     if (req.query.search) {
       filter.$or = [
         { title: { $regex: req.query.search, $options: "i" } },
@@ -125,16 +170,29 @@ export const getAllProperties = async (req, res) => {
       ];
     }
 
+
+
+
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+
+
+
+
 
     const properties = await Property.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
+
+
+
     const total = await Property.countDocuments(filter);
+
+
 
     res.status(200).json({
       success: true,
@@ -144,6 +202,10 @@ export const getAllProperties = async (req, res) => {
       properties: properties,
     });
 
+
+
+
+
   } catch (error) {
     console.error("Get All Properties Error:", error.message);
     res.status(500).json({
@@ -151,11 +213,23 @@ export const getAllProperties = async (req, res) => {
       message: error.message || "Failed to fetch properties",
     });
   }
+
+
+
+
 };
 
-// ================= 3. GET SINGLE PROPERTY =================
+
+
+
+
+
+// GET SINGLE PROPERTY 
 export const getPropertyById = async (req, res) => {
+
   try {
+
+
     const property = await Property.findById(req.params.id);
 
     if (!property) {
@@ -164,6 +238,10 @@ export const getPropertyById = async (req, res) => {
         message: "Property not found",
       });
     }
+
+
+
+
 
     property.views = (property.views || 0) + 1;
     await property.save();
@@ -173,26 +251,43 @@ export const getPropertyById = async (req, res) => {
       property: property,
     });
 
+
+
+
+
   } catch (error) {
     console.error("Get Property By ID Error:", error.message);
-    
+
     if (error.name === "CastError") {
       return res.status(404).json({
         success: false,
         message: "Property not found",
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Failed to fetch property",
     });
+
   }
+
+
 };
 
-// ================= 4. UPDATE PROPERTY =================
+
+
+
+
+
+
+//  UPDATE PROPERTY 
 export const updateProperty = async (req, res) => {
+
+
   try {
+
+
     const property = await Property.findById(req.params.id);
 
     if (!property) {
@@ -202,16 +297,27 @@ export const updateProperty = async (req, res) => {
       });
     }
 
+
+
     const photoFiles = req.files?.["photos"] || [];
     const videoFile = req.files?.["video"]?.[0] || null;
+
+
+
 
     const photoUrls = photoFiles.length > 0
       ? photoFiles.map((file) => getFileUrl(req, file.filename))
       : property.photos;
 
+
+
+
     const videoUrl = videoFile
       ? getFileUrl(req, videoFile.filename)
       : property.videoUrl;
+
+
+
 
     // Parse nearby places
     let nearbyPlaces = property.nearby;
@@ -225,6 +331,9 @@ export const updateProperty = async (req, res) => {
       }
     }
 
+
+
+
     // Parse amenities
     let amenitiesList = property.amenities;
     if (req.body.amenities) {
@@ -236,6 +345,9 @@ export const updateProperty = async (req, res) => {
         amenitiesList = property.amenities;
       }
     }
+
+
+
 
     // Update fields
     property.title = req.body.title || property.title;
@@ -252,11 +364,16 @@ export const updateProperty = async (req, res) => {
     property.isFurnished = req.body.isFurnished === "true" || req.body.isFurnished === true || property.isFurnished;
     property.furnishedType = req.body.furnishedType || property.furnishedType;
     property.availableFrom = req.body.availableFrom || property.availableFrom;
-    
+
+
+
     property.photos = photoUrls;
     property.videoUrl = videoUrl;
     property.nearby = nearbyPlaces;
     property.amenities = amenitiesList;
+
+
+
 
     // Update location
     if (req.body.address || req.body.city || req.body.area) {
@@ -267,11 +384,16 @@ export const updateProperty = async (req, res) => {
       property.location.landmark = req.body.landmark || property.location.landmark;
     }
 
+
+
     // Update size
     if (req.body.sizeValue || req.body.sizeUnit) {
       property.size.value = req.body.sizeValue || property.size.value;
       property.size.unit = req.body.sizeUnit || property.size.unit;
     }
+
+
+
 
     // Update contact
     if (req.body.contactName || req.body.contactPhone) {
@@ -281,13 +403,23 @@ export const updateProperty = async (req, res) => {
       property.contact.email = req.body.contactEmail || property.contact.email;
     }
 
+
+
+
     const updatedProperty = await property.save();
+
+
+
 
     res.status(200).json({
       success: true,
       message: "Property updated successfully!",
       property: updatedProperty,
     });
+
+
+
+
 
   } catch (error) {
     console.error("Update Property Error:", error.message);
@@ -296,12 +428,23 @@ export const updateProperty = async (req, res) => {
       message: error.message || "Failed to update property",
     });
   }
+
+
 };
 
-// ================= 5. DELETE PROPERTY =================
+
+
+
+
+
+//  DELETE PROPERTY 
 export const deleteProperty = async (req, res) => {
+
+
   try {
+
     const property = await Property.findByIdAndDelete(req.params.id);
+
 
     if (!property) {
       return res.status(404).json({
@@ -310,24 +453,47 @@ export const deleteProperty = async (req, res) => {
       });
     }
 
+
+
+
     res.status(200).json({
       success: true,
       message: "Property deleted successfully!",
     });
 
+
+
+
   } catch (error) {
     console.error("Delete Property Error:", error.message);
-    
+
     if (error.name === "CastError") {
       return res.status(404).json({
         success: false,
         message: "Property not found",
       });
     }
-    
+
+
+
+
+
     res.status(500).json({
       success: false,
       message: error.message || "Failed to delete property",
     });
   }
+
+
+
+
 };
+
+
+
+
+
+
+
+
+
